@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from .bots import Openai_Bot, Anothrpic_Bot, Perplexity_Bot  # adjust path as needed
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.conf import settings
@@ -21,15 +21,19 @@ bots = {
 
 
 def chatbot_view(request):
+    if "chat_history" not in request.session:
+        request.session["chat_history"] = []
+
     bot_response = ""
-    retrieved_docs = []
     selected_bot = "openai"
     user_message = ""
+    matches = []
 
     if request.method == "POST":
         selected_bot = request.POST.get("bot")
         user_message = request.POST.get("message")
         config = {"configurable": {"thread_id": str(uuid.uuid4())}}
+
         if user_message:
             streamed_steps = []
             for step in bots[selected_bot].graph.stream(
@@ -38,22 +42,32 @@ def chatbot_view(request):
                 config=config,
             ):
                 streamed_steps.append(step)
-                # step["messages"][-1].pretty_print()
-            matches = []
+
             if streamed_steps:
-                # Assuming the final message is in the last streamed step
                 bot_response = streamed_steps[-1]["messages"][-1].content
-                source_string = streamed_steps[-1]["messages"][2].content
-                print("source:", source_string)
+                bot_response = re.sub(r'<thinking>.*?</thinking>', '', bot_response, flags=re.DOTALL)
+                source_string = ""
+                if (len(streamed_steps[-1]["messages"]) > 2):
+                    source_string = streamed_steps[-1]["messages"][2].content
+
                 matches = re.findall(
                     r"metadata=\{[^}]*'source': '([^']+)'[^}]*\}.*?page_content='(.*?)'\)",
                     source_string,
-                    re.DOTALL)
+                    re.DOTALL
+                )
+
+                # Add to chat history
+                request.session["chat_history"].append({
+                    "user": user_message,
+                    "bot_name": selected_bot,
+                    "bot": bot_response,
+                    "matches": matches
+                })
+                request.session.modified = True
+
     return render(request, "chat.html", {
-        "bot_response": bot_response,
         "selected_bot": selected_bot,
-        "user_message": user_message,
-        "matches": matches,
+        "chat_history": request.session["chat_history"],
     })
 
 
@@ -82,3 +96,18 @@ def get_file_content(request):
     except Exception as e:
         return JsonResponse({"error": f"Error reading file: {str(e)}"}, status=500)
     return JsonResponse(data)
+
+
+def clear_chat_view(request):
+    if request.method == "POST":
+        if 'chat_history' in request.session:
+            del request.session['chat_history']
+        # You can also clear other session data if needed, e.g. selected_bot
+        return redirect('chat')  # Replace 'chat' with the name of your chat URL pattern
+    # If someone tries to GET this URL, just redirect too
+    return redirect('chat')
+
+def reload_db(request):
+    if request.method == "POST":
+        bots["openai"].fill_vector_db()
+    return redirect('chat')

@@ -3,86 +3,206 @@
 <head>
     <meta charset="UTF-8">
     <title>Chatbot</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .chat-header {
+            padding: 10px 20px;
+            background-color: #f0f0f0;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .chat-box {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background-color: #fafafa;
+        }
+
+        .chat-entry {
+            padding: 10px 20px;
+            border-top: 1px solid #ccc;
+            background-color: white;
+        }
+
+        textarea {
+            width: 100%;
+            resize: none;
+        }
+
+        .message {
+            margin-bottom: 1em;
+        }
+
+        .user-msg {
+            font-weight: bold;
+        }
+
+        .bot-msg {
+            margin-left: 1em;
+            color: darkblue;
+        }
+
+        .source {
+            margin-left: 2em;
+            background: #f9f9f9;
+            padding: 5px;
+            border-left: 3px solid #ccc;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 8px;
+        }
+
+        .form-inline {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .form-inline select,
+        .form-inline input[type="submit"] {
+            flex-shrink: 0;
+            height: 40px;
+        }
+
+        .form-inline textarea {
+            flex-grow: 1;
+            min-height: 40px;
+            max-height: 100px;
+            overflow-y: auto;
+            resize: vertical;
+        }
+    </style>
 </head>
 <body>
-    <h1>Chat with a Bot</h1>
-    <form method="post">
-        {% csrf_token %}
-        <label for="bot">Select a bot:</label>
-        <select name="bot" id="bot">
-            <option value="openai" {% if selected_bot == 'openai' %}selected{% endif %}>OpenAI (GPT-4o)</option>
-            <option value="anthropic" {% if selected_bot == 'anthropic' %}selected{% endif %}>Anthropic (Claude)</option>
-            <option value="perplexity" {% if selected_bot == 'perplexity' %}selected{% endif %}>Perplexity (LLaMA)</option>
-        </select>
-        <br><br>
+<div class="chat-container">
+    <div class="chat-header">
+        <h2>Chat with a Bot</h2>
+    </div>
 
-        <label for="message">Your message:</label><br>
-        <textarea name="message" id="message" rows="4" cols="50">{{ user_message }}</textarea><br><br>
-        <input type="submit" value="Send">
-    </form>
+    <div class="chat-box">
+        {% for entry in chat_history %}
+            <div class="message">
+                <div class="user-msg">You: {{ entry.user }}</div>
+                <div class="bot-msg">{{entry.bot_name}}: {{ entry.bot }}</div>
 
-    {% if bot_response %}
-        <h3>Bot Response:</h3>
-        <p>{{ bot_response }}</p>
-    {% endif %}
-
-    {% if matches %}
-        <h3>Retrieved Documents:</h3>
-        <ul>
-            {% for path, content in matches %}
-                <li>
-                    <strong>Source:</strong> 
-                    <a href="#" class="source-link" data-source="{{ path|urlencode }}" id="link-{{ forloop.counter }}">
-                        {{ path }}
-                    </a>
-                    <br>
-                    <strong>Relevent Content:</strong>
-                    <pre style="white-space: pre-wrap; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; padding: 8px;">{{ content }}</pre>
-                    <br>
-                    <div id="content-{{ forloop.counter }}" 
-                         style="display:none; white-space: pre-wrap; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; padding: 8px;">
-                        <!-- Content will be loaded here on click -->
+                {% if entry.matches %}
+                    <div class="source">
+                        <button class="toggle-docs-btn" data-docid="docs-{{ forloop.counter0 }}">
+                            Show Relevant Documents ▼
+                        </button>
+                        <div id="docs-{{ forloop.counter0 }}" class="docs-section" style="display: none;">
+                            <ul>
+                                {% for path, content in entry.matches %}
+                                    <li>
+                                        <strong>Source:</strong>
+                                        <a href="#" class="source-link"
+                                           data-source="{{ path|urlencode }}"
+                                           data-content-id="content-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}">
+                                            {{ path }}
+                                        </a><br>
+                                        <strong>Relevant Content:</strong>
+                                        <pre>{{ content }}</pre>
+                                        <div id="content-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}"
+                                             style="display: none;">
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
                     </div>
-                </li>
-            {% endfor %}
-        </ul>
-    {% endif %}
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const links = document.querySelectorAll('.source-link');
+    <div class="chat-entry">
+        <form method="post" class="form-inline">
+            {% csrf_token %}
+            <label for="bot">Bot:</label>
+            <select name="bot" id="bot">
+                <option value="openai" {% if selected_bot == 'openai' %}selected{% endif %}>OpenAI (GPT-3)</option>
+                <option value="anthropic" {% if selected_bot == 'anthropic' %}selected{% endif %}>Anthropic (Claude)</option>
+                <option value="perplexity" {% if selected_bot == 'perplexity' %}selected{% endif %}>Perplexity (LLaMA)</option>
+            </select>
+            <textarea name="message" id="message" rows="2" placeholder="Type your message..."></textarea>
+            <input type="submit" value="Send">
+        </form>
+        <form method="post" action="{% url 'clear_chat' %}" style="margin-top: 8px;">
+            {% csrf_token %}
+            <input type="submit" value="Clear Chat">
+        </form>
+        <form method="post" action="{% url 'reload_db' %}" style="margin-top: 8px;">
+            {% csrf_token %}
+            <input type="submit" value="Reload Database">
+        </form>
+    </div>
+</div>
 
-            links.forEach((link, index) => {
-                link.addEventListener('click', async (e) => {
-                    e.preventDefault();
-                    const sourcePath = decodeURIComponent(link.dataset.source);
-                    const contentDiv = document.getElementById(`content-${index + 1}`);
+<script>
+    window.onload = () => {
+        const chatBox = document.querySelector('.chat-box');
+        chatBox.scrollTop = chatBox.scrollHeight;
+    };
 
-                    if (contentDiv.style.display === 'block') {
-                        // Hide if already shown
-                        contentDiv.style.display = 'none';
-                        return;
-                    }
-
-                    if (!contentDiv.textContent.trim()) {
-                        // Fetch content if not loaded
-                        try {
-                            const response = await fetch(`/get_file_content/?source=${encodeURIComponent(sourcePath)}`);
-                            if (!response.ok) throw new Error('Network response was not ok');
-                            const data = await response.json();
-                            const prettyJson = JSON.stringify(data, null, 2);
-                            contentDiv.textContent = prettyJson;
-                        } catch (error) {
-                            contentDiv.textContent = 'Failed to load content.';
-                            console.error(error);
-                        }
-                    }
-
-                    contentDiv.style.display = 'block';
-                });
+    document.addEventListener('DOMContentLoaded', () => {
+        // Toggle individual docs section
+        const toggleButtons = document.querySelectorAll('.toggle-docs-btn');
+        toggleButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const section = document.getElementById(btn.dataset.docid);
+                const isVisible = section.style.display === 'block';
+                section.style.display = isVisible ? 'none' : 'block';
+                btn.textContent = isVisible ? 'Show Relevant Documents ▼' : 'Hide Relevant Documents ▲';
             });
         });
-    </script>
+
+        // Load file content dynamically
+        const links = document.querySelectorAll('.source-link');
+        links.forEach(link => {
+            link.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const sourcePath = decodeURIComponent(link.dataset.source);
+                const contentDiv = document.getElementById(link.dataset.contentId);
+
+                if (contentDiv.style.display === 'block') {
+                    contentDiv.style.display = 'none';
+                    return;
+                }
+
+                if (!contentDiv.textContent.trim()) {
+                    try {
+                        const response = await fetch(`/get_file_content/?source=${encodeURIComponent(sourcePath)}`);
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        const data = await response.json();
+                        contentDiv.textContent = JSON.stringify(data, null, 2);
+                    } catch (error) {
+                        contentDiv.textContent = 'Failed to load content.';
+                        console.error(error);
+                    }
+                }
+
+                contentDiv.style.display = 'block';
+            });
+        });
+    });
+</script>
 </body>
 </html>
-

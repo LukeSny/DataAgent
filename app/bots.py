@@ -30,10 +30,13 @@ class Openai_Bot:
 
     def __init__(self, data_dir):
         self.set_up()
-        self.create_db(data_dir)
+        self.create_db()
         self.retrieve_tool = make_retrieve_tool(self.vector_store)
         self.tools = ToolNode([self.retrieve_tool])
         self.graph = self.create_graph()
+        base_dir = os.path.dirname(__file__)
+        data_path = os.path.join(base_dir, data_dir)
+        self.data_dir = data_path
 
     def set_up(self):
         # if not os.environ.get("OPENAI_API_KEY"):
@@ -45,7 +48,7 @@ class Openai_Bot:
         self.llm = init_chat_model("gpt-4o-mini", model_provider="openai")
         
 
-    def create_db(self, data_dir):
+    def create_db(self):
         embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
         base_dir = os.path.dirname(__file__)
         vector_path = os.path.join(base_dir, "chroma_vector_db")
@@ -64,11 +67,8 @@ class Openai_Bot:
             print("database found at", vector_path)
         self.vector_store = vector_store
 
-    def fill_vector_db(self, data_dir, vector_store):
-        # Create a list of file paths for all JSON files in the directory
-        base_dir = os.path.dirname(__file__)
-        data_path = os.path.join(base_dir, data_dir)
-        json_files = [os.path.join(data_path, f) for f in os.listdir(data_path) if f.endswith('.json')]
+    def fill_vector_db(self):
+        json_files = [os.path.join(self.data_dir, f) for f in os.listdir(self.data_dir) if f.endswith('.json')]
         # Initialize a list to collect all documents
         all_docs = []
 
@@ -88,7 +88,7 @@ class Openai_Bot:
 
         print(f"Split docs into {len(all_splits)} sub-documents.")
 
-        return vector_store.add_documents(documents=all_splits)
+        return self.vector_store.add_documents(documents=all_splits)
 
     
     
