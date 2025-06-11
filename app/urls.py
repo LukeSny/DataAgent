@@ -4,5 +4,5 @@ from . import views
 
 urlpatterns = [
     path('', views.chatbot_view, name='chat'),
-    path('chat/', views.chatbot_response, name='chatbot_response'),
+    path("get_file_content/", views.get_file_content, name="get_file_content"),
 ]

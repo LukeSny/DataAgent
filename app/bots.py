@@ -47,24 +47,28 @@ class Openai_Bot:
 
     def create_db(self, data_dir):
         embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
-        vector_path = "./chroma_vector_db"
+        base_dir = os.path.dirname(__file__)
+        vector_path = os.path.join(base_dir, "chroma_vector_db")
+        print("looking for db at:", vector_path)
         db_exists = os.path.exists(vector_path)
         vector_store = Chroma(
             collection_name="example_collection",
             embedding_function=embeddings,
-            persist_directory= vector_path,  # Where to save data locally, remove if not necessary
+            persist_directory= vector_path,
         )
+        # self.fill_vector_db(data_dir, vector_store)
         if not db_exists:
             print("creating vector database at", vector_path)
-            self.fill_vector_db(data_dir, vector_store)
+        
         else:
             print("database found at", vector_path)
         self.vector_store = vector_store
 
     def fill_vector_db(self, data_dir, vector_store):
         # Create a list of file paths for all JSON files in the directory
-        json_files = [os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith('.json')]
-
+        base_dir = os.path.dirname(__file__)
+        data_path = os.path.join(base_dir, data_dir)
+        json_files = [os.path.join(data_path, f) for f in os.listdir(data_path) if f.endswith('.json')]
         # Initialize a list to collect all documents
         all_docs = []
 

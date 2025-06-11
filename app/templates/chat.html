@@ -26,18 +26,63 @@
         <p>{{ bot_response }}</p>
     {% endif %}
 
-    {% if retrieved_docs %}
+    {% if matches %}
         <h3>Retrieved Documents:</h3>
         <ul>
-            {% for doc in retrieved_docs %}
+            {% for path, content in matches %}
                 <li>
-                    <strong>Source:</strong> {{ doc.metadata }}<br>
-                    <strong>Content:</strong> {{ doc.page_content }}
+                    <strong>Source:</strong> 
+                    <a href="#" class="source-link" data-source="{{ path|urlencode }}" id="link-{{ forloop.counter }}">
+                        {{ path }}
+                    </a>
+                    <br>
+                    <strong>Relevent Content:</strong>
+                    <pre style="white-space: pre-wrap; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; padding: 8px;">{{ content }}</pre>
+                    <br>
+                    <div id="content-{{ forloop.counter }}" 
+                         style="display:none; white-space: pre-wrap; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; padding: 8px;">
+                        <!-- Content will be loaded here on click -->
+                    </div>
                 </li>
             {% endfor %}
         </ul>
     {% endif %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const links = document.querySelectorAll('.source-link');
+
+            links.forEach((link, index) => {
+                link.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    const sourcePath = decodeURIComponent(link.dataset.source);
+                    const contentDiv = document.getElementById(`content-${index + 1}`);
+
+                    if (contentDiv.style.display === 'block') {
+                        // Hide if already shown
+                        contentDiv.style.display = 'none';
+                        return;
+                    }
+
+                    if (!contentDiv.textContent.trim()) {
+                        // Fetch content if not loaded
+                        try {
+                            const response = await fetch(`/get_file_content/?source=${encodeURIComponent(sourcePath)}`);
+                            if (!response.ok) throw new Error('Network response was not ok');
+                            const data = await response.json();
+                            const prettyJson = JSON.stringify(data, null, 2);
+                            contentDiv.textContent = prettyJson;
+                        } catch (error) {
+                            contentDiv.textContent = 'Failed to load content.';
+                            console.error(error);
+                        }
+                    }
+
+                    contentDiv.style.display = 'block';
+                });
+            });
+        });
+    </script>
 </body>
 </html>
-
 
