@@ -1,0 +1,13 @@
+langchain
+openai
+langchain-text-splitters 
+langchain-community 
+langgraph
+langchain[openai]
+langchain-openai
+langchain-chroma
+langchain-anthropic
+langchain-perplexity
+jq
+IPython
+django
