@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chatbot</title>
+</head>
+<body>
+    <h1>Chat with a Bot</h1>
+    <form method="post">
+        {% csrf_token %}
+        <label for="bot">Select a bot:</label>
+        <select name="bot" id="bot">
+            <option value="openai" {% if selected_bot == 'openai' %}selected{% endif %}>OpenAI (GPT-4o)</option>
+            <option value="anthropic" {% if selected_bot == 'anthropic' %}selected{% endif %}>Anthropic (Claude)</option>
+            <option value="perplexity" {% if selected_bot == 'perplexity' %}selected{% endif %}>Perplexity (LLaMA)</option>
+        </select>
+        <br><br>
+
+        <label for="message">Your message:</label><br>
+        <textarea name="message" id="message" rows="4" cols="50">{{ user_message }}</textarea><br><br>
+        <input type="submit" value="Send">
+    </form>
+
+    {% if bot_response %}
+        <h3>Bot Response:</h3>
+        <p>{{ bot_response }}</p>
+    {% endif %}
+
+    {% if retrieved_docs %}
+        <h3>Retrieved Documents:</h3>
+        <ul>
+            {% for doc in retrieved_docs %}
+                <li>
+                    <strong>Source:</strong> {{ doc.metadata }}<br>
+                    <strong>Content:</strong> {{ doc.page_content }}
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</body>
+</html>
+
+

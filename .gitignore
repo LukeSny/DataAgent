@@ -1,0 +1,6 @@
+data/
+api_keys/
+db.sqlite3
+__pycache__/
+*.pyc
+chroma_vector_db/
